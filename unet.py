@@ -1,5 +1,6 @@
 #!/usr/bin/env ipython
 import torch.nn as nn
+from torch.nn import Conv2d, ConvTranspose2d, init
 import torch as pt
 
 
@@ -10,7 +11,6 @@ class EncoderBlock(nn.Module):
             nn.Conv2d(in_ch, out_ch, kernel_size, padding=padding),
             nn.ReLU(inplace=True),
             nn.Conv2d(out_ch, out_ch, kernel_size, padding=padding),
-            nn.ReLU(inplace=True),
         )
         self.pool = nn.MaxPool2d(2)
 
@@ -38,7 +38,6 @@ class DecoderBlock(nn.Module):
             nn.Conv2d(in_ch + skip_ch, out_ch, kernel_size, padding=padding),
             actv,
             nn.Conv2d(out_ch, out_ch, kernel_size, padding=padding),
-            actv,
         )
 
     def forward(self, x, skip):
@@ -67,8 +66,17 @@ class UNET(nn.Module):
             nn.Conv2d(in_ch * 2**depth, in_ch * 2**depth, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_ch * 2**depth, out_ch * 2**depth, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
         )
+
+    def init(
+        self,
+        init_fn=lambda x: (
+            init.kaiming_normal(x.weight)
+            if isinstance(x, (nn.Conv2d, nn.ConvTranspose2d))
+            else None
+        ),
+    ):
+        self.apply(init_fn)
 
     def forward(self, x):
         skips = []
@@ -77,7 +85,6 @@ class UNET(nn.Module):
             skips.append(skip)
 
         x = self.bottleneck(x)
-        print(x.shape)
 
         for i in reversed(range(self.depth)):
             skip = skips.pop()
