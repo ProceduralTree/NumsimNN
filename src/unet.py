@@ -49,29 +49,51 @@ class DecoderBlock(nn.Module):
 
 class UNET(nn.Module):
 
-    def __init__(self, in_ch, out_ch, depth, kernel_size, padding) -> None:
+    def __init__(
+        self, in_ch, out_ch, depth, kernel_size, padding, hidden_factor=10
+    ) -> None:
         super().__init__()
         self.depth = depth
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
-        for i in range(depth):
-            input = in_ch * 2**i
-            output = out_ch * 2**i
-            self.encoder.append(EncoderBlock(input, input * 2, kernel_size, padding))
+        self.encoder.append(EncoderBlock(in_ch, hidden_factor, kernel_size, padding))
+        self.decoder.append(
+            DecoderBlock(
+                hidden_factor,
+                hidden_factor,
+                out_ch,
+                kernel_size,
+                padding,
+            )
+        )
+        for i in range(1, depth):
+            input = hidden_factor
+            output = hidden_factor
+            self.encoder.append(EncoderBlock(input, input, kernel_size, padding))
             self.decoder.append(
-                DecoderBlock(output * 2, input * 2, output, kernel_size, padding)
+                DecoderBlock(output, input, output, kernel_size, padding)
             )
 
         self.bottleneck = nn.Sequential(
-            nn.Conv2d(in_ch * 2**depth, in_ch * 2**depth, kernel_size=3, padding=1),
+            nn.Conv2d(
+                hidden_factor,
+                hidden_factor * 10,
+                kernel_size=3,
+                padding=1,
+            ),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_ch * 2**depth, out_ch * 2**depth, kernel_size=3, padding=1),
+            nn.Conv2d(
+                hidden_factor * 10,
+                hidden_factor,
+                kernel_size=3,
+                padding=1,
+            ),
         )
 
     def init(
         self,
         init_fn=lambda x: (
-            init.kaiming_normal(x.weight)
+            init.kaiming_normal_(x.weight)
             if isinstance(x, (nn.Conv2d, nn.ConvTranspose2d))
             else None
         ),

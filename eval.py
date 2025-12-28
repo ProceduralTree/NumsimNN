@@ -8,7 +8,7 @@ from torch.nn import init
 plt.ioff()
 
 reload(unet)
-    dev = pt.device("cpu")
+dev = pt.device("cpu")
 if pt.xpu.is_available():
     print("Found Functional Intel GPU using dev=xpu")
     dev = pt.device("xpu")
@@ -16,7 +16,7 @@ if pt.cuda.is_available():
     print("Found Functional NVIDIA GPU using dev=cuda")
     dev = pt.device("cuda")
 
-uNet = unet.UNET(1, 1, 4, 3, 1).to(dev)
+uNet = unet.UNET(1, 1, 3, 3, 1 , hidden_factor=50).to(dev)
 uNet.init()
 
 import torchvision
@@ -29,36 +29,18 @@ transform = transforms.Compose(
 # Create datasets for training & validation, download if necessary
 training_set = torchvision.datasets.FashionMNIST('./data', train=True, transform=transform, download=True )
 validation_set = torchvision.datasets.FashionMNIST('./data', train=False, transform=transform, download=True)
-train_loader = DataLoader(training_set , batch_size = 128 , shuffle=True)
+train_loader = DataLoader(training_set , batch_size = 256 , shuffle=True)
 debug_data = Subset(training_set , range(256))
-debug_loader =DataLoader(debug_data , batch_size = 128 , shuffle=False) 
-val_loader = DataLoader(validation_set , batch_size = 128 , shuffle=False)
+debug_loader =DataLoader(debug_data , batch_size = 256 , shuffle=False) 
+val_loader = DataLoader(validation_set , batch_size = 256 , shuffle=False)
 
 from src.train_diffusion import train , NoiseSchedule
 import src.train_diffusion as tdf
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 reload(tdf)
+validation_set = torchvision.datasets.FashionMNIST('./data', train=False, transform=transform, download=True)
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 writer = SummaryWriter('runs/fashion_trainer_{}'.format(timestamp))
 N = NoiseSchedule(dev)
-train(uNet , 100 , train_loader , debug_loader, writer, dev , N)
-
-from src.train_diffusion import sample_diffusion
-plt.close('all')
-
-reload(tdf)
-input, output = debug_data[pt.randint(0, 256, ())]
-input = input.unsqueeze(1).to(dev)
-y = sample_diffusion(1000 , uNet ,(1,1,64,64) , dev , N)
-fig , ax = plt.subplots(1,3 ,figsize=(9,3))
-ax[0].imshow(input[0,:,:].to("cpu").detach().squeeze() , cmap="Greys")
-ax[0].set_title("Original")
-ax[1].imshow(y[0,0,:,:].to("cpu").detach().squeeze() , cmap="Greys")
-ax[1].set_title("Prediction")
-ax[2].imshow((input.to(dev)-y)[0,0,:,:].to("cpu").detach().squeeze() , cmap="gray")
-ax[2].set_title("Difference")
-for i in range(3):
-     ax[i].set_xlabel("x")
-     ax[i].set_ylabel("y")
-fig
+train(uNet , 100 , train_loader , val_loader, writer, dev , N)
