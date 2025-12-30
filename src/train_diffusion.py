@@ -19,7 +19,7 @@ import torch as pt
 from dataclasses import dataclass
 class NoiseSchedule:
 
-    def __init__(self,dev : pt.device ,  eps = 0.008 , T=100):
+    def __init__(self,dev : pt.device ,  eps = 0.008 , T=1000):
         # 1. Create time steps [0, T]
         # 2. Compute alpha_bar using cosine schedule
         self.T = T
@@ -31,7 +31,7 @@ class NoiseSchedule:
         # beta= pt.clip(beta, 0, 0.999)
 
         # self.beta = beta.to(dev)
-        self.beta = pt.linspace(1e-4 , 0.02 , self.T)
+        self.beta = pt.linspace(1e-4 , 0.02 , self.T).to(dev)
         self.alpha = (1-self.beta).to(dev)
         self.alpha_bar = pt.cumprod(self.alpha, dim=0).to(dev)
 
@@ -56,7 +56,7 @@ def diffusion_step(x : Tensor , model : nn.Module,dev, N):
     noisy_input = pt.sqrt(1-N.alpha_bar[index]).view(-1,1,1,1) *  noise + pt.sqrt(N.alpha_bar[index]).view(-1,1,1,1) * x
     
     
-    output = model(noisy_input) 
+    output = model(noisy_input, N.beta[index]) 
     return output , noise
 
 
@@ -71,8 +71,10 @@ from torch import Tensor
 def sample_diffusion(T:int,model: nn.Module , shape:tuple , dev:pt.device , N):
    x = pt.randn(shape , device=dev)
    for t in reversed(range(0,T)):
+      
       with pt.no_grad():
-         predicted_noise = model(x)
+         t_tensor = pt.tensor([t] , device=dev)
+         predicted_noise = model(x,N.beta[None,t])
       noise = pt.randn(shape , device=dev)
       sigma = pt.sqrt(N.beta[t])
       weighted_noise = ((1-N.alpha[t].view(-1,1,1,1))/pt.sqrt(1.-N.alpha_bar[t])) * predicted_noise
@@ -125,9 +127,9 @@ def train(
             if i% 100 == 99:
                 last_loss = running_loss / 100  # loss per batch
                 tb_x = e * len(data) + i + 1
-                writer.add_scalar("Loss/train", last_loss, tb_x)
                 running_loss = 0.0
 
+        writer.add_scalar("Loss/train", last_loss, e)
 
         validation_loss = 0.
         for i , data in enumerate(validation_data):

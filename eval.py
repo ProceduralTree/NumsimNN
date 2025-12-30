@@ -16,7 +16,7 @@ if pt.cuda.is_available():
     print("Found Functional NVIDIA GPU using dev=cuda")
     dev = pt.device("cuda")
 
-uNet = unet.UNET(1, 1, 3, 3, 1 , hidden_factor=50).to(dev)
+uNet = unet.UNET(1, 1, 2, 5,  hidden_factor=50 , input_shape=(32,32)).to(dev)
 uNet.init()
 
 import torchvision
@@ -24,15 +24,15 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader,Subset
 transform = transforms.Compose(
     [transforms.ToTensor(),
-     transforms.Resize((64,64)),
+     transforms.Resize((32,32)),
     transforms.Normalize((0.5,), (0.5,))])
 # Create datasets for training & validation, download if necessary
 training_set = torchvision.datasets.FashionMNIST('./data', train=True, transform=transform, download=True )
 validation_set = torchvision.datasets.FashionMNIST('./data', train=False, transform=transform, download=True)
-train_loader = DataLoader(training_set , batch_size = 256 , shuffle=True)
+train_loader = DataLoader(training_set , batch_size = 128 , shuffle=True)
 debug_data = Subset(training_set , range(256))
 debug_loader =DataLoader(debug_data , batch_size = 256 , shuffle=False) 
-val_loader = DataLoader(validation_set , batch_size = 256 , shuffle=False)
+val_loader = DataLoader(validation_set , batch_size = 128 , shuffle=False)
 
 from src.train_diffusion import train , NoiseSchedule
 import src.train_diffusion as tdf
@@ -43,4 +43,4 @@ validation_set = torchvision.datasets.FashionMNIST('./data', train=False, transf
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 writer = SummaryWriter('runs/fashion_trainer_{}'.format(timestamp))
 N = NoiseSchedule(dev)
-train(uNet , 100 , train_loader , val_loader, writer, dev , N)
+train(uNet , 1000 , train_loader , val_loader, writer, dev , N)
