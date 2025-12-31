@@ -99,13 +99,13 @@ class UNET(nn.Module):
 
         self.bottleneck = nn.Sequential(
             nn.Linear(
-                (input_shape[0] * input_shape[1]) // 2 ** (depth + 2) * hidden_factor,
+                (input_shape[0] * input_shape[1]) // 4**depth * hidden_factor,
                 1000,
             ),
             nn.GELU(),
             nn.Linear(
                 1000,
-                (input_shape[0] * input_shape[1]) // 2 ** (depth + 2) * hidden_factor,
+                (input_shape[0] * input_shape[1]) // 4**depth * hidden_factor,
             ),
         )
 

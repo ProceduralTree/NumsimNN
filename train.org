@@ -32,7 +32,7 @@ if pt.cuda.is_available():
 
 
 #+begin_src python 
-uNet = unet.UNET(1, 1, 2, 5,  hidden_factor=50 , input_shape=(32,32)).to(dev)
+uNet = unet.UNET(3, 3, 3, 5,  hidden_factor=50 , input_shape=(32,32)).to(dev)
 uNet.init()
 #+end_src
 
@@ -49,11 +49,11 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader,Subset
 transform = transforms.Compose(
     [transforms.ToTensor(),
-     transforms.Resize((32,32)),
+     transforms.Resize((64,64)),
     transforms.Normalize((0.5,), (0.5,))])
 # Create datasets for training & validation, download if necessary
-training_set = torchvision.datasets.FashionMNIST('./data', train=True, transform=transform, download=True )
-validation_set = torchvision.datasets.FashionMNIST('./data', train=False, transform=transform, download=True)
+training_set = torchvision.datasets.CIFAR10('./data', train=True, transform=transform, download=True )
+validation_set = torchvision.datasets.CIFAR10('./data', train=False, transform=transform, download=True)
 train_loader = DataLoader(training_set , batch_size = 128 , shuffle=True)
 debug_data = Subset(training_set , range(256))
 debug_loader =DataLoader(debug_data , batch_size = 256 , shuffle=False) 
@@ -134,16 +134,16 @@ plt.ioff()
 
 dev = 'cuda'
     
-uNet = UNET(1, 1, 2, 5,  hidden_factor=50 , input_shape=(32,32)).to(dev)
+uNet = UNET(3, 3, 3, 5,  hidden_factor=50 , input_shape=(32,32)).to(dev)
 uNet.load_state_dict(pt.load("models/checkpoint"))
 
 reload(tdf)
-N = NoiseSchedule(dev,T=2000)
-y = sample_diffusion(1999 , uNet ,(1,1,32,32) , dev , N)
+N = NoiseSchedule(dev,T=1000)
+y = sample_diffusion(999 , uNet ,(1,1,32,32) , dev , N)
 fig , ax = plt.subplots(1,1 ,figsize=(5,4))
 #ax[0].imshow(input[0,:,:].to("cpu").detach().squeeze() , cmap="Greys")
 #ax[0].set_title("Original")
-ax.imshow(y[0,0,:,:].to("cpu").detach().squeeze() , cmap="Greys")
+ax.imshow(y[0].to("cpu").detach().squeeze() , cmap="Greys")
 ax.set_title("Prediction")
 
 

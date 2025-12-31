@@ -44,7 +44,7 @@ import torch as pt
 from dataclasses import dataclass
 class NoiseSchedule:
 
-    def __init__(self,dev : pt.device ,  eps = 0.008 , T=1000):
+    def __init__(self,dev : pt.device ,  eps = 0.008 , T=100):
         # 1. Create time steps [0, T]
         # 2. Compute alpha_bar using cosine schedule
         self.T = T
