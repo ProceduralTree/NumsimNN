@@ -1,4 +1,16 @@
-# Forward Diffusion
+# Noise Schedule
+# \begin{align}
+# \label{eq:4}
+# x_t &= \lambda  x_0 + (1-\lambda ) \mathcal{N}(0,I)
+# \end{align}
+# where \(\lambda \) is the discrete pendant to the integral 
+
+# \begin{align}
+# \label{eq:5}
+# \overline{\alpha}_n &= \prod_{j=0}^n \alpha_{t}
+# \lambda &= 
+# \end{align}
+
 # \begin{align}
 # \label{eq:1}
 # x_t &= \lambda   x_0  + (1-\lambda  ) \mathcal{N}(0,I)
@@ -35,11 +47,7 @@ class NoiseSchedule:
         self.alpha = (1-self.beta).to(dev)
         self.alpha_bar = pt.cumprod(self.alpha, dim=0).to(dev)
 
-
-
-# #+RESULTS:
-
-
+# Forward Procces
 
 import torch as pt
 import torch.nn as nn
@@ -59,10 +67,10 @@ def diffusion_step(x : Tensor , model : nn.Module,dev, N):
     output = model(noisy_input, N.beta[index]) 
     return output , noise
 
+# Backward Procces
 
 
-# #+RESULTS: alphabars.png
-# [[file:alphabars.png]]
+
 
 
 import torch as pt

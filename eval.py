@@ -44,3 +44,7 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 writer = SummaryWriter('runs/fashion_trainer_{}'.format(timestamp))
 N = NoiseSchedule(dev)
 train(uNet , 1000 , train_loader , val_loader, writer, dev , N)
+
+import matplotlib.pyplot as plt
+import random
+plt.imshow(validation_set[random.randint(0,len(validation_set))][0][0] , cmap="Greys")

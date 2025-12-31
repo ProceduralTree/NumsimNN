@@ -9,9 +9,21 @@ from torch import Tensor
 
 #+RESULTS:
 
-* Continuous Noise Diffusion training
-Aim of this training is to learn The reverse Diffusion process.
-** Forward Diffusion
+* Discrete Noise Diffusion
+fixed noise schedule used the same noise schedule as the continnous version using a fixed schedule sampled from \(\beta (t)\)
+** Noise Schedule
+\begin{align}
+\label{eq:4}
+x_t &= \lambda  x_0 + (1-\lambda ) \mathcal{N}(0,I)
+\end{align}
+where \(\lambda \) is the discrete pendant to the integral 
+
+\begin{align}
+\label{eq:5}
+\overline{\alpha}_n &= \prod_{j=0}^n \alpha_{t}
+\lambda &= 
+\end{align}
+
 \begin{align}
 \label{eq:1}
 x_t &= \lambda   x_0  + (1-\lambda  ) \mathcal{N}(0,I)
@@ -49,10 +61,20 @@ class NoiseSchedule:
         self.alpha_bar = pt.cumprod(self.alpha, dim=0).to(dev)
 
 #+end_src
+#+name: alphabars.png
+#+begin_src python :results file graphics output :file alphabars.png
+import matplotlib.pyplot as plt
+N = NoiseSchedule(dev)
+plt.ioff()
+plt.close("all")
+plt.plot(N.alpha_bar.to('cpu') , label=r"$\bar{\alpha}_t$")
+plt.plot(N.alpha.to('cpu') , label=r"$\alpha_t$")
+plt.legend()
+#+end_src
 
-#+RESULTS:
-
-
+#+RESULTS: alphabars.png
+[[file:alphabars.png]]
+** Forward Procces
 #+begin_src python :tangle src/train_diffusion.py
 import torch as pt
 import torch.nn as nn
@@ -76,20 +98,10 @@ def diffusion_step(x : Tensor , model : nn.Module,dev, N):
 
 #+RESULTS:
 
+** Backward Procces
 
-#+name: alphabars.png
-#+begin_src python :results file graphics output :file alphabars.png
-import matplotlib.pyplot as plt
-N = NoiseSchedule(dev)
-plt.ioff()
-plt.close("all")
-plt.plot(N.alpha_bar.to('cpu') , label=r"$\bar{\alpha}_t$")
-plt.plot(N.alpha.to('cpu') , label=r"$\alpha_t$")
-plt.legend()
-#+end_src
 
-#+RESULTS: alphabars.png
-[[file:alphabars.png]]
+
 
 #+begin_src python :tangle src/train_diffusion.py 
 import torch as pt
@@ -113,22 +125,6 @@ def sample_diffusion(T:int,model: nn.Module , shape:tuple , dev:pt.device , N):
 #+end_src
 
 #+RESULTS:
-
-* Discrete Noise Diffusion
-fixed noise schedule used the same noise schedule as the continnous version using a fixed schedule sampled from \(\beta (t)\)
-** Forward diffusion
-\begin{align}
-\label{eq:4}
-x_t &= \lambda  x_0 + (1-\lambda ) \mathcal{N}(0,I)
-\end{align}
-where \(\lambda \) is the discrete pendant to the integral 
-
-\begin{align}
-\label{eq:5}
-\overline{\alpha}_n &= \prod_{j=0}^n \alpha_{t}
-\lambda &= 
-\end{align}
-
 
 
 
@@ -195,7 +191,7 @@ def train(
         writer.add_scalar("Loss/val", validation_loss, e)
     
 #+end_src
-
+* Time Embeddings
 #+RESULTS:
 #+begin_src python :tangle src/embedding.py
 from torch.nn import Module , Sequential
@@ -230,3 +226,37 @@ class SinusoidalEmbedding(nn.Module):
 #+end_src
 
 #+RESULTS:
+
+* Spatial Attention
+See [[https://www.digitalocean.com/community/tutorials/attention-mechanisms-in-computer-vision-cbam][Attention in CNN Digitalocean]].
+Aim of spatial attention is to capture local features, this is done using dot product similarity un three feature maps \(Q,K,V\) by which we generate using a convolutional layer
+** QKV Feature Maps
+
+#+begin_src python
+from torch import Tensor
+from torch import nn
+
+class SpatialAttention(nn.Module):
+    def __init__(self , in_ch , heads):
+        self.super.__init__()
+        self.heads = heads
+        self.feature_map = nn.Conv2d(in_ch , heads * 3 , kernel_size=1)
+        return None
+    def flatten(self,T:Tensor):
+        T.view(T.shape[0] , -1)
+
+    def forward(self , x:Tensor):
+        B , C , H , W = x.shape
+        QKV:tuple[Tensor,Tensor,Tensor]  = self.feature_map(x).view(B,self.heads ,-1).chunk(3 , dim=1) # type: tuple[Tensor, Tensor, Tensor]
+        Q,K,V = QKV
+
+        dot = Q @ K.transpose(1,2)
+        
+
+
+
+    
+ 
+#+end_src
+
+

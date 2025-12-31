@@ -1,5 +1,4 @@
-
-
+# Time Embeddings
 # #+RESULTS:
 
 from torch.nn import Module , Sequential
