@@ -23,7 +23,7 @@ if pt.cuda.is_available():
 #+end_src
 
 #+RESULTS:
-: Found Functional Intel GPU using dev=xpu
+: Found Functional NVIDIA GPU using dev=cuda
 
 
 
@@ -83,7 +83,7 @@ train(uNet , 10 , debug_data , debug_data , writer, dev)
 
 * Diffusion Model Training
 
-#+begin_src python
+#+begin_src python :eval never
 from src.train_diffusion import train , NoiseSchedule
 import src.train_diffusion as tdf
 from datetime import datetime
@@ -98,10 +98,20 @@ train(uNet , 1000 , train_loader , val_loader, writer, dev , N)
 #+end_src
 
 #+RESULTS:
-: /tmp/babel-qXtbFe/python-DWKVCC
+: /tmp/babel-tkRk3K/python-8kn08t
+
+#+name: fig:images/sample
+#+begin_src python :results graphics file output :file images/sample.png
+import matplotlib.pyplot as plt
+import random
+plt.imshow(validation_set[random.randint(0,len(validation_set))][0][0] , cmap="Greys")
+#+end_src
+
+#+RESULTS: fig:images/sample
+[[file:images/sample.png]]
 
 
-#+begin_src python :results file graphics :file images/output.png :tangle img.py
+#+begin_src python :results file graphics :file images/output.png :tangle img.py :sync
 from src.train_diffusion import sample_diffusion
 import src.unet as unet
 from src.unet import UNET
@@ -137,7 +147,7 @@ ax.imshow(y[0,0,:,:].to("cpu").detach().squeeze() , cmap="Greys")
 ax.set_title("Prediction")
 
 
-#ax[2].imshow((input.to(dev)-y)[0,0,:,:].to("cpu").detach().squeeze() , cmap="gray")
+#ax[2].imshow((input.to(dev)-y)[0,0,:,:]>>>.to("cpu").detach().squeeze() , cmap="gray")
 #ax[2].set_title("Difference")
 for i in range(1):
      

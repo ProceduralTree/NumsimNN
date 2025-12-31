@@ -36,15 +36,15 @@ class NoiseSchedule:
         # 1. Create time steps [0, T]
         # 2. Compute alpha_bar using cosine schedule
         self.T = T
-        # self.t = pt.linspace(0 , self.T , self.T)
-        # alpha_bar = pt.cos((self.t / self.T + eps) / (1 + eps) * pt.pi / 2) ** 2
-        # alpha_bar = alpha_bar / alpha_bar[0]  # normalize so alpha_bar[0] = 1
+        self.t = pt.linspace(0 , self.T , self.T)
+        alpha_bar = pt.cos((self.t / self.T + eps) / (1 + eps) * pt.pi / 2) ** 2
+        alpha_bar = alpha_bar / alpha_bar[0]  # normalize so alpha_bar[0] = 1
 
-        # beta = 1 - (alpha_bar[1:] / alpha_bar[:-1])
-        # beta= pt.clip(beta, 0, 0.999)
+        beta = 1 - (alpha_bar[1:] / alpha_bar[:-1])
+        beta= pt.clip(beta, 0, 0.999)
 
-        # self.beta = beta.to(dev)
-        self.beta = pt.linspace(1e-4 , 0.02 , self.T).to(dev)
+        self.beta = beta.to(dev)
+        #self.beta = pt.linspace(1e-4 , 0.02 , self.T).to(dev)
         self.alpha = (1-self.beta).to(dev)
         self.alpha_bar = pt.cumprod(self.alpha, dim=0).to(dev)
 
