@@ -16,7 +16,7 @@ if pt.cuda.is_available():
     print("Found Functional NVIDIA GPU using dev=cuda")
     dev = pt.device("cuda")
 
-uNet = unet.UNET(3, 3, 3, 5,  hidden_factor=50 , input_shape=(32,32)).to(dev)
+uNet = unet.UNET(3, 3, 3, 5,  hidden_factor=150 , input_shape=(64,64)).to(dev)
 uNet.init()
 
 import torchvision
@@ -47,4 +47,4 @@ train(uNet , 1000 , train_loader , val_loader, writer, dev , N)
 
 import matplotlib.pyplot as plt
 import random
-plt.imshow(validation_set[random.randint(0,len(validation_set))][0][0] , cmap="Greys")
+plt.imshow(validation_set[random.randint(0,len(validation_set))][0].permute(1,2,0) , cmap="Greys")

@@ -31,21 +31,24 @@ import torch as pt
 from dataclasses import dataclass
 class NoiseSchedule:
 
-    def __init__(self,dev : pt.device ,  eps = 0.008 , T=100):
+    def __init__(self,dev : pt.device ,  eps = 0.008 , T=100 , linear=False):
         # 1. Create time steps [0, T]
         # 2. Compute alpha_bar using cosine schedule
+        
         self.T = T
-        self.t = pt.linspace(0 , self.T , self.T)
-        alpha_bar = pt.cos((self.t / self.T + eps) / (1 + eps) * pt.pi / 2) ** 2
+        self.time = pt.linspace(0 , self.T , self.T+1).to(dev)
+        alpha_bar = pt.cos((self.time / self.T + eps) / (1 + eps) * pt.pi / 2) ** 2
         alpha_bar = alpha_bar / alpha_bar[0]  # normalize so alpha_bar[0] = 1
 
         beta = 1 - (alpha_bar[1:] / alpha_bar[:-1])
         beta= pt.clip(beta, 0, 0.999)
 
+        self.alpha_bar = alpha_bar[1:].to(dev)
         self.beta = beta.to(dev)
-        #self.beta = pt.linspace(1e-4 , 0.02 , self.T).to(dev)
+        if linear:
+            self.beta = pt.linspace(1e-4 , 0.02 , self.T).to(dev)
+            self.alpha_bar = pt.cumprod(1-self.beta, dim=0).to(dev)
         self.alpha = (1-self.beta).to(dev)
-        self.alpha_bar = pt.cumprod(self.alpha, dim=0).to(dev)
 
 # Forward Procces
 
@@ -64,7 +67,7 @@ def diffusion_step(x : Tensor , model : nn.Module,dev, N):
     noisy_input = pt.sqrt(1-N.alpha_bar[index]).view(-1,1,1,1) *  noise + pt.sqrt(N.alpha_bar[index]).view(-1,1,1,1) * x
     
     
-    output = model(noisy_input, N.beta[index]) 
+    output = model(noisy_input, N.time[index]) 
     return output , noise
 
 # Backward Procces
@@ -76,19 +79,40 @@ def diffusion_step(x : Tensor , model : nn.Module,dev, N):
 import torch as pt
 import torch.nn as nn
 from torch import Tensor
-def sample_diffusion(T:int,model: nn.Module , shape:tuple , dev:pt.device , N):
+import torchvision
+
+def log_samples(writer, x, step, nrow=8):
+    """
+    writer: TensorBoard SummaryWriter
+    x: tensor (B,C,H,W) with values in [-1,1]
+    step: current iteration / timestep
+    nrow: images per row
+    """
+    # normalize to [0,1]
+    x_norm = (x + 1) / 2
+    grid = torchvision.utils.make_grid(x_norm, nrow=nrow)
+    writer.add_image("samples", grid, global_step=step)
+
+def sample_diffusion(T:int,model: nn.Module , shape:tuple , dev:pt.device , N , writer=None):
    x = pt.randn(shape , device=dev)
    for t in reversed(range(0,T)):
       
       with pt.no_grad():
-         t_tensor = pt.tensor([t] , device=dev)
-         predicted_noise = model(x,N.beta[None,t])
-      noise = pt.randn(shape , device=dev)
+         predicted_noise = model(x,N.time[None,t])
       sigma = pt.sqrt(N.beta[t])
-      weighted_noise = ((1-N.alpha[t].view(-1,1,1,1))/pt.sqrt(1.-N.alpha_bar[t])) * predicted_noise
+      #sigma = pt.sqrt(
+      #   N.beta[t] * (1 - N.alpha_bar[t-1]) / (1 - N.alpha_bar[t])
+      #)
+      noise = pt.randn(shape , device=dev)
+      weighted_noise = (N.beta[t].view(-1,1,1,1)/pt.sqrt(1.-N.alpha_bar[t])) * predicted_noise
       x = (1/pt.sqrt(N.alpha[t]).view(-1,1,1,1)) * (x - weighted_noise)
       if t>0:
          x += sigma * noise
+      #x = x.clamp(-1,1)
+
+      if writer is not None and t%(T//10)==0:
+          log_samples(writer, x, step=T-t)
+
 
    return x
 
@@ -153,3 +177,5 @@ def train(
             pt.save(optimizer.state_dict() , f"optim/checkpoint")
             min_loss= validation_loss
         writer.add_scalar("Loss/val", validation_loss, e)
+        if e%10 ==0:
+            sample_diffusion(N.T , model ,  (8,3,64,64) , dev , N , writer=writer)
