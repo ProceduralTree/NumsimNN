@@ -256,36 +256,87 @@ class SinusoidalEmbedding(nn.Module):
 
 #+RESULTS:
 
-* Spatial Attention
+* Attention
+:PROPERTIES:
+:header-args:python: :tangle src/attention.py :session
+:END:
 See [[https://www.digitalocean.com/community/tutorials/attention-mechanisms-in-computer-vision-cbam][Attention in CNN Digitalocean]].
-Aim of spatial attention is to capture local features, this is done using dot product similarity un three feature maps \(Q,K,V\) by which we generate using a convolutional layer
-** QKV Feature Maps
+Aim of spatial attention is t capture local features, this is done using dot product similarity un three feature maps \(Q,K,V\) by which we generate using a convolutional layer
+** Scaled Dot Attention
 
 #+begin_src python
 from torch import Tensor
 from torch import nn
+from typing import Tuple
+import torch as pt
+from torch import nn
 
-class SpatialAttention(nn.Module):
-    def __init__(self , in_ch , heads):
-        self.super.__init__()
-        self.heads = heads
-        self.feature_map = nn.Conv2d(in_ch , heads * 3 , kernel_size=1)
+class MultiheadAttention(nn.Module):
+    def __init__(self , in_ch , out_ch , heads):
+        super().__init__()
+        self.ch = in_ch
+        # ensure propper divisibility 
+        self.dim = in_ch // heads
+        assert self.dim != 0
+        self.heads = heads 
+        self.feature_map = nn.Conv2d(in_ch , self.dim * self.heads * 3 , kernel_size=1)
+        self.softmax = nn.Softmax(dim=-1)
+        self.proj = nn.Conv2d(self.heads * self.dim, in_ch, kernel_size=1)
+        self.norm = nn.GroupNorm(1,in_ch)
         return None
-    def flatten(self,T:Tensor):
-        T.view(T.shape[0] , -1)
 
     def forward(self , x:Tensor):
         B , C , H , W = x.shape
-        QKV:tuple[Tensor,Tensor,Tensor]  = self.feature_map(x).view(B,self.heads ,-1).chunk(3 , dim=1) # type: tuple[Tensor, Tensor, Tensor]
-        Q,K,V = QKV
-
-        dot = Q @ K.transpose(1,2)
+        x = self.norm(x)
         
+        QKV : Tuple[Tensor,Tensor,Tensor]  = self.feature_map(x).view(B,  3 * self.heads , self.dim ,-1).chunk(3 , dim=1) # type: tuple[Tensor, Tensor, Tensor]
+        Q,K,V = QKV
+        Q:Tensor =Q.permute(0,1,3,2)# B,Heads , HW , dim
+        K:Tensor =K.permute(0,1,2,3)# B,Heads , dim , HW
+        V:Tensor =V.permute(0,1,3,2)# B,Heads , HW, dim
+        print(f"Q:{Q.shape}")
+        print(f"K:{K.shape}")
+        print(f"V:{V.shape}")
 
-
-
-    
- 
+        dot : Tensor= Q @ K # B , Heads , HW , HW
+        attention: Tensor = self.softmax(dot*C**-0.5)
+        values = attention @ V # B , Heads , HW , dim
+        print(f"V:{V.shape}")
+        values = values.permute(0,1,3,2)
+        values = values.reshape(B,self.heads * self.dim , H,W)
+        return self.proj(values)
+        #return self.proj(values)
 #+end_src
 
+#+RESULTS:
+: None
 
+#+begin_src python :results output 
+x_test = pt.rand(5,32, 8,8)
+
+attn = MultiheadAttention(32 ,32 , 4)
+print(attn(x_test).shape)
+#+end_src
+
+#+RESULTS:
+: Q:torch.Size([5, 4, 64, 8])
+: K:torch.Size([5, 4, 8, 64])
+: V:torch.Size([5, 4, 64, 8])
+: V:torch.Size([5, 4, 64, 8])
+: torch.Size([5, 32, 8, 8])
+** Spatial Attention
+
+#+begin_src python
+from torch import nn
+from torch import Tensor
+class SpatialAttention(nn.Module):
+    def __init__(self , in_ch , out_ch , heads):
+        super().__init__()
+        self.meanpool = nn.AdaptiveAvgPool2d(1)
+        self.maxpool = nn.AdaptiveMaxPool2d(1)
+
+    def forward(self,x:Tensor):
+        input = pt.cat([x.mean((-1,-2)) , x.max((-1,-2))])
+
+        
+#+end_src

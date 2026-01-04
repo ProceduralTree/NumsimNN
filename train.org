@@ -52,8 +52,8 @@ transform = transforms.Compose(
      transforms.Resize((64,64)),
     transforms.Normalize((0.5,), (0.5,))])
 # Create datasets for training & validation, download if necessary
-training_set = torchvision.datasets.CIFAR10('./data', train=True, transform=transform, download=True )
-validation_set = torchvision.datasets.CIFAR10('./data', train=False, transform=transform, download=True)
+training_set = torchvision.datasets.FashionMNIST('./data', train=True, transform=transform, download=True )
+validation_set = torchvision.datasets.FashionMNIST('./data', train=False, transform=transform, download=True)
 train_loader = DataLoader(training_set , batch_size = 128 , shuffle=True)
 debug_data = Subset(training_set , range(256))
 debug_loader =DataLoader(debug_data , batch_size = 256 , shuffle=False) 
@@ -107,30 +107,30 @@ import random
 plt.imshow(validation_set[random.randint(0,len(validation_set))][0].permute(1,2,0) , cmap="Greys")
 #+end_src
 
-#+RESULTS: fig:images/sample
-[[file:images/sample.png]]
+    #+RESULTS: fig:images/sample
+    [[file:images/sample.png]]
 
 
-#+begin_src python :results file graphics :file images/output.png :tangle img.py :sync 
-from src.train_diffusion import sample_diffusion
-import src.unet as unet
-from src.unet import UNET
-import torch as pt
-import matplotlib.pyplot as plt
-from src.train_diffusion import   NoiseSchedule
-import src.train_diffusion as tdf
-import torchvision
-import torchvision.transforms as transforms
-from torch.utils.data import DataLoader,Subset
-from importlib import reload
+    #+begin_src python :results file graphics :file images/output.png :tangle img.py :sync 
+    from src.train_diffusion import sample_diffusion
+    import src.unet as unet
+    from src.unet import UNET
+    import torch as pt
+    import matplotlib.pyplot as plt
+    from src.train_diffusion import   NoiseSchedule
+    import src.train_diffusion as tdf
+    import torchvision
+    import torchvision.transforms as transforms
+    from torch.utils.data import DataLoader,Subset
+    from importlib import reload
 
-reload(unet)
-transform = transforms.Compose(
-    [transforms.ToTensor(),
-     transforms.Resize((32,32)),
-    transforms.Normalize((0.5,), (0.5,))])
-plt.close('all')
-plt.ioff()
+    reload(unet)
+    transform = transforms.Compose(
+        [transforms.ToTensor(),
+        transforms.Resize((32,32)),
+        transforms.Normalize((0.5,), (0.5,))])
+    plt.close('all')
+    plt.ioff()
 
 dev = 'cuda'
     
@@ -151,15 +151,15 @@ ax.imshow( img*0.5+1, cmap="Greys")
 ax.set_title("Prediction")
 
 
-#ax[2].imshow((input.to(dev)-y)[0,0,:,:]>>>.to("cpu").detach().squeeze() , cmap="gray")
-#ax[2].set_title("Difference")
-for i in range(1):
-     
-     ax.set_xlabel("x")
-     ax.set_ylabel("y")
-fig.savefig("images/output.png")
-fig
-#+end_src
+    #ax[2].imshow((input.to(dev)-y)[0,0,:,:]>>>.to("cpu").detach().squeeze() , cmap="gray")
+    #ax[2].set_title("Difference")
+    for i in range(1):
 
-#+RESULTS:
-[[file:images/output.png]]
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+    fig.savefig("images/output.png")
+    fig
+    #+end_src
+
+    #+RESULTS:
+    [[file:images/output.png]]
