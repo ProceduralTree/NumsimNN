@@ -12,6 +12,7 @@ dependencies = [
   "jupyter>=1.1.1",
   "ipython>=9.8.0",
   "tensorboard>=2.20.0",
+  "pyvista>=0.46.4",
 ]
 
 [project.optional-dependencies]
