@@ -3,11 +3,12 @@ import torch.nn as nn
 from torch.nn import Conv2d, ConvTranspose2d, init
 import torch as pt
 from .embedding import SinusoidalEmbedding
+from .attention import MultiheadAttention
 from torch import Tensor
 
 
 class EncoderBlock(nn.Module):
-    def __init__(self, in_ch, out_ch, kernel_size=3, actv=nn.GELU()):
+    def __init__(self, in_ch, out_ch, kernel_size=3, actv=nn.SiLU()):
         super().__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(
@@ -42,7 +43,7 @@ class DecoderBlock(nn.Module):
         skip_ch,
         out_ch,
         kernel_size=3,
-        actv=nn.GELU(),
+        actv=nn.SiLU(),
     ):
         super().__init__()
         self.up = nn.ConvTranspose2d(in_ch, in_ch, kernel_size=2, stride=2)
@@ -86,7 +87,7 @@ class UNET(nn.Module):
         self.decoder = nn.ModuleList()
         self.post_smoothing = nn.Sequential(
             nn.Conv2d(hidden_factor, hidden_factor, 3, padding=1, padding_mode="zeros"),
-            nn.LeakyReLU(),
+            nn.SiLU(),
             nn.Conv2d(hidden_factor, out_ch, 3, padding=1, padding_mode="zeros"),
         )
         self.encoder.append(EncoderBlock(in_ch, hidden_factor))
@@ -97,17 +98,7 @@ class UNET(nn.Module):
             self.encoder.append(EncoderBlock(input, input, kernel_size))
             self.decoder.append(DecoderBlock(output, input, output, kernel_size))
 
-        self.bottleneck = nn.Sequential(
-            nn.Linear(
-                (input_shape[0] * input_shape[1]) // 4**depth * hidden_factor,
-                1000,
-            ),
-            nn.GELU(),
-            nn.Linear(
-                1000,
-                (input_shape[0] * input_shape[1]) // 4**depth * hidden_factor,
-            ),
-        )
+        self.bottleneck = MultiheadAttention(hidden_factor, hidden_factor, 8)
 
     def init(
         self,
@@ -125,18 +116,12 @@ class UNET(nn.Module):
         for i in range(self.depth):
             x, skip = self.encoder[i](x)
             skips.append(skip)
-        x: Tensor = x
-        x_linear: Tensor = x.flatten(start_dim=1)
+        # x_linear: Tensor = x.flatten(start_dim=1)
 
-        x_linear: Tensor = self.bottleneck(x_linear)
-        x = x_linear.reshape(
-            -1,
-            self.hidden_factor,
-            self.shape[0] // 2**self.depth,
-            self.shape[1] // 2**self.depth,
-        )
+        x: Tensor = self.bottleneck(x + t_embedd)
+        # x = x_linear.reshape(-1, self.hidden_factor, self.shape[0] // 2**self.depth, self.shape[1] // 2**self.depth,)
 
         for i in reversed(range(self.depth)):
             skip = skips.pop()
-            x = self.decoder[i](x, skip * t_embedd)
+            x = self.decoder[i](x, skip + t_embedd)
         return self.post_smoothing(x)

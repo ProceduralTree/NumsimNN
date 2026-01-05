@@ -63,6 +63,7 @@ def diffusion_step(x : Tensor , model : nn.Module,dev, N):
     model: trainings model for example uNet
     """
     index = pt.randint(0, len(N.beta) , (x.size(0),) , device=dev)
+    
     noise = pt.randn_like(x, device=dev)
     noisy_input = pt.sqrt(1-N.alpha_bar[index]).view(-1,1,1,1) *  noise + pt.sqrt(N.alpha_bar[index]).view(-1,1,1,1) * x
     
@@ -99,16 +100,16 @@ def sample_diffusion(T:int,model: nn.Module , shape:tuple , dev:pt.device , N , 
       
       with pt.no_grad():
          predicted_noise = model(x,N.time[None,t])
-      sigma = pt.sqrt(N.beta[t])
       #sigma = pt.sqrt(
       #   N.beta[t] * (1 - N.alpha_bar[t-1]) / (1 - N.alpha_bar[t])
       #)
-      noise = pt.randn(shape , device=dev)
       weighted_noise = (N.beta[t].view(-1,1,1,1)/pt.sqrt(1.-N.alpha_bar[t])) * predicted_noise
       x = (1/pt.sqrt(N.alpha[t]).view(-1,1,1,1)) * (x - weighted_noise)
       if t>0:
-         x += sigma * noise
-      #x = x.clamp(-1,1)
+          sigma = pt.sqrt(N.beta[t])#* (1-N.alpha_bar[t-1])/(1-N.alpha_bar[t]))
+          noise = pt.randn(shape , device=dev)
+          x += sigma * noise
+      #x = x.clamp(-5,5)
 
       if writer is not None and t%(T//10)==0:
           log_samples(writer, x, step=T-t)
@@ -152,6 +153,7 @@ def train(
             x=x.to(dev)
             optimizer.zero_grad()
             output , noise = diffusion_step(x , model , dev , N)
+
             loss = loss_fn(noise , output)
             loss.backward()
             optimizer.step()
