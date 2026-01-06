@@ -222,6 +222,9 @@ def train(
             sample_diffusion(N.T , model ,  (8,1,64,64) , dev , N , writer=writer)
     
 #+end_src
+
+#+RESULTS:
+
 * Time Embeddings
 #+RESULTS:
 #+begin_src python :tangle src/embedding.py
