@@ -44,7 +44,7 @@ import torch as pt
 from dataclasses import dataclass
 class NoiseSchedule:
 
-    def __init__(self,dev : pt.device ,  eps = 0.008 , T=100 , linear=False):
+    def __init__(self,dev : pt.device ,  eps = 0.008 , T=1000 , linear=False):
         # 1. Create time steps [0, T]
         # 2. Compute alpha_bar using cosine schedule
         
@@ -140,10 +140,10 @@ def sample_diffusion(T:int,model: nn.Module , shape:tuple , dev:pt.device , N , 
       weighted_noise = (N.beta[t].view(-1,1,1,1)/pt.sqrt(1.-N.alpha_bar[t])) * predicted_noise
       x = (1/pt.sqrt(N.alpha[t]).view(-1,1,1,1)) * (x - weighted_noise)
       if t>0:
-          sigma = pt.sqrt(N.beta[t])#* (1-N.alpha_bar[t-1])/(1-N.alpha_bar[t]))
+          sigma = pt.sqrt(N.beta[t]* (1-N.alpha_bar[t-1])/(1-N.alpha_bar[t]))
           noise = pt.randn(shape , device=dev)
           x += sigma * noise
-      #x = x.clamp(-5,5)
+      #x = x.clamp(-1,1)
 
       if writer is not None and t%(T//10)==0:
           log_samples(writer, x, step=T-t)
@@ -219,7 +219,7 @@ def train(
             min_loss= validation_loss
         writer.add_scalar("Loss/val", validation_loss, e)
         if e%10 ==0:
-            sample_diffusion(N.T , model ,  (8,3,64,64) , dev , N , writer=writer)
+            sample_diffusion(N.T , model ,  (8,1,64,64) , dev , N , writer=writer)
     
 #+end_src
 * Time Embeddings
