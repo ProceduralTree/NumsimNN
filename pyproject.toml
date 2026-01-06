@@ -13,6 +13,7 @@ dependencies = [
   "ipython>=9.8.0",
   "tensorboard>=2.20.0",
   "pyvista>=0.46.4",
+  "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
