@@ -37,7 +37,7 @@ if pt.cuda.is_available():
 
 
 #+begin_src python 
-uNet = unet.UNET(3, 3, 3, 5,  hidden_factor=50 , input_shape=(32,32)).to(dev)
+uNet = unet.UNET(3, 3, 3, 5,  hidden_factor=70 , input_shape=(32,32)).to(dev)
 uNet.init()
 #+end_src
 
@@ -214,8 +214,9 @@ plt.ioff()
 
 dev = 'cuda'
     
-uNet = UNET(3, 3, 3, 5,  hidden_factor=50 , input_shape=(64,64)).to(dev)
+uNet = UNET(3, 3, 3, 5,  hidden_factor=70 , input_shape=(64,64)).to(dev)
 uNet.load_state_dict(pt.load("models_diffusion/checkpoint"))
+uNet.eval()
 
 reload(tdf)
 N = NoiseSchedule(dev,T=1000)

@@ -38,11 +38,48 @@ class MultiheadAttention(nn.Module):
 
 from torch import nn
 from torch import Tensor
-class SpatialAttention(nn.Module):
-    def __init__(self , in_ch , out_ch , heads):
+class ChannelAttention(nn.Module):
+    def __init__(self , channels):
         super().__init__()
+        self.mlp = nn.Sequential(
+            nn.Conv2d(channels , channels//2, 1),
+            nn.SiLU(),
+            nn.Conv2d(channels // 2 , channels ,1),
+        )
         self.meanpool = nn.AdaptiveAvgPool2d(1)
         self.maxpool = nn.AdaptiveMaxPool2d(1)
+        self.actv = nn.Sigmoid()
 
     def forward(self,x:Tensor):
-        input = pt.cat([x.mean((-1,-2)) , x.max((-1,-2))])
+        mean_attention = self.mlp(self.meanpool(x))
+        max_attention = self.mlp(self.maxpool(x))
+        attention = self.actv(max_attention + mean_attention)
+        return x * attention
+
+
+class SpatialAttention(nn.Module):
+    def __init__(self , channels):
+        super().__init__()
+        kernel_size=7
+        self.conv = nn.Sequential(
+            nn.Conv2d(2 ,1 , kernel_size , padding=(kernel_size-1)//2),
+        )
+        self.actv = nn.Sigmoid()
+        
+    def forward(self,x:Tensor):
+        mean_pool = pt.mean(x,dim=1 , keepdims=True)
+        max_pool = pt.max(x,dim=1 , keepdims=True).values
+        pool = pt.cat((mean_pool , max_pool) , dim=1)
+        attention = self.conv(pool)
+        attention = self.actv(attention)
+        return x * attention
+class ConvBlockAttention(nn.Module):
+    def __init__(self , channels):
+        super().__init__()
+        self.attention = nn.Sequential(
+            ChannelAttention(channels),
+            SpatialAttention(channels),
+        )
+    
+    def forward(self,x:Tensor):
+        return self.attention(x)

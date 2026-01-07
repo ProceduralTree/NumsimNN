@@ -16,7 +16,7 @@ if pt.cuda.is_available():
     print("Found Functional NVIDIA GPU using dev=cuda")
     dev = pt.device("cuda")
 
-uNet = unet.UNET(3, 3, 3, 5,  hidden_factor=50 , input_shape=(32,32)).to(dev)
+uNet = unet.UNET(3, 3, 3, 5,  hidden_factor=70 , input_shape=(32,32)).to(dev)
 uNet.init()
 
 import torchvision

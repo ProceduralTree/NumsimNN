@@ -15,14 +15,14 @@ class EncoderBlock(nn.Module):
         embedding_dimension,
         kernel_size=3,
         actv=nn.SiLU(),
-        dropout=0.4,
+        dropout=0.2,
     ):
         super().__init__()
         # self.res = nn.Conv2d(in_ch, out_ch, 1)
         self.time_embedding = nn.Sequential(
-            nn.Linear(embedding_dimension, out_ch * 2),
+            nn.Linear(embedding_dimension, in_ch * 2),
             nn.SiLU(),
-            nn.Linear(out_ch * 2, out_ch * 2),
+            nn.Linear(in_ch * 2, in_ch * 2),
         )
         self.conv = nn.Sequential(
             nn.Conv2d(
@@ -32,7 +32,7 @@ class EncoderBlock(nn.Module):
                 padding=kernel_size // 2,
                 padding_mode="replicate",
             ),
-            nn.BatchNorm2d(out_ch),
+            # nn.BatchNorm2d(out_ch),
             actv,
             nn.Conv2d(
                 out_ch,
@@ -41,7 +41,7 @@ class EncoderBlock(nn.Module):
                 padding=kernel_size // 2,
                 padding_mode="replicate",
             ),
-            nn.BatchNorm2d(out_ch),
+            # nn.BatchNorm2d(out_ch),
             actv,
             nn.Dropout2d(dropout),
         )
@@ -51,8 +51,8 @@ class EncoderBlock(nn.Module):
         skip = x
         gamma, mu = self.time_embedding(t).chunk(2, dim=1)
         # residual_connection = self.res(x)
-        x = self.conv(x)
         x = x * (1 + gamma[:, :, None, None]) + mu[:, :, None, None]
+        x = self.conv(x)
         x = self.pool(x)  # + residual_connection)
         return x, skip
 
@@ -66,15 +66,15 @@ class DecoderBlock(nn.Module):
         embedding_dimension,
         kernel_size=3,
         actv=nn.SiLU(),
-        dropout=0.4,
+        dropout=0.2,
     ):
         super().__init__()
         # self.res = nn.Conv2d(in_ch + skip_ch, out_ch, 1)
         self.up = nn.ConvTranspose2d(in_ch, in_ch, kernel_size=2, stride=2)
         self.time_embedding = nn.Sequential(
-            nn.Linear(embedding_dimension, out_ch * 2),
+            nn.Linear(embedding_dimension, (in_ch + skip_ch) * 2),
             nn.SiLU(),
-            nn.Linear(out_ch * 2, out_ch * 2),
+            nn.Linear((in_ch + skip_ch) * 2, (in_ch + skip_ch) * 2),
         )
         self.conv = nn.Sequential(
             nn.Conv2d(
@@ -84,7 +84,7 @@ class DecoderBlock(nn.Module):
                 padding=kernel_size // 2,
                 padding_mode="replicate",
             ),
-            nn.BatchNorm2d(out_ch),
+            # nn.BatchNorm2d(out_ch),
             actv,
             nn.Conv2d(
                 out_ch,
@@ -93,7 +93,7 @@ class DecoderBlock(nn.Module):
                 padding=kernel_size // 2,
                 padding_mode="replicate",
             ),
-            nn.BatchNorm2d(out_ch),
+            # nn.BatchNorm2d(out_ch),
             actv,
             nn.Dropout2d(dropout),
         )
@@ -103,8 +103,8 @@ class DecoderBlock(nn.Module):
         x = self.up(x)  # upsample
         x = pt.cat([x, skip], 1)  # concatenate skip connection
         # residual_connection = self.res(x)
-        x = self.conv(x)
         x = x * (1 + gamma[:, :, None, None]) + mu[:, :, None, None]
+        x = self.conv(x)
         return x  # + residual_connection
 
 

@@ -13,8 +13,9 @@ class SinusoidalEmbedding(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(self.dim * 2 , hidden ),
             nn.ReLU(),
-            nn.Linear(hidden , out )
+            nn.Linear(hidden , out ),
         )
+        self.T = 1000
 
 
     def embedd(self, t:Tensor):
@@ -22,8 +23,8 @@ class SinusoidalEmbedding(nn.Module):
         i = pt.arange(self.dim, device=t.device)
         freqs = 10000 ** (-2 * i / self.dim)
         # Compute sin and cos embeddings
-        embedded_sin = pt.sin(t[:, None] * freqs[None, :])
-        embedded_cos = pt.cos(t[:, None] * freqs[None, :])
+        embedded_sin = pt.sin(t[:, None]/self.T * freqs[None, :])
+        embedded_cos = pt.cos(t[:, None]/self.T * freqs[None, :])
         return pt.cat([embedded_sin, embedded_cos], dim=1)
 
     def forward(self, t):
