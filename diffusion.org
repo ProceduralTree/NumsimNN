@@ -207,6 +207,7 @@ def train(
         writer.add_scalar("Loss/train", last_loss, e)
 
         validation_loss = 0.
+        model.eval()
         for i , data in enumerate(validation_data):
             with pt.no_grad():
                 input, label = data
@@ -216,12 +217,12 @@ def train(
                 validation_loss += loss.item()
         validation_loss /= len(validation_data)
         if validation_loss < min_loss :
-            pt.save(model.state_dict() , f"models/checkpoint")
-            pt.save(optimizer.state_dict() , f"optim/checkpoint")
+            pt.save(model.state_dict() , f"models_diffusion/checkpoint")
+            pt.save(optimizer.state_dict() , f"optim_diffusion/checkpoint")
             min_loss= validation_loss
         writer.add_scalar("Loss/val", validation_loss, e)
         if e%10 ==0:
-            sample_diffusion(N.T , model ,  (8,1,64,64) , dev , N , writer=writer)
+            sample_diffusion(N.T , model ,  (8,3,64,64) , dev , N , writer=writer)
     
 #+end_src
 
@@ -319,14 +320,46 @@ class MultiheadAttention(nn.Module):
 #+begin_src python
 from torch import nn
 from torch import Tensor
-class SpatialAttention(nn.Module):
-    def __init__(self , in_ch , out_ch , heads):
+class ChannelAttention(nn.Module):
+    def __init__(self , channels):
         super().__init__()
+        self.mlp = nn.Sequential(
+            nn.Conv2d(channel , channels//2, 1),
+            nn.SiLU(),
+            nn.Conv2d(channels // 2 , channels ,1),
+        )
         self.meanpool = nn.AdaptiveAvgPool2d(1)
         self.maxpool = nn.AdaptiveMaxPool2d(1)
+        self.actv = Sigmoid()
 
     def forward(self,x:Tensor):
-        input = pt.cat([x.mean((-1,-2)) , x.max((-1,-2))])
+        mean_attention = self.mlp(self.meanpool(x))
+        max_attention = self.mlp(self.maxpool(x))
+        attention = self.actv(max_attention + mean_attention)
+        return x * attention
+
+
+class SpatialAttention(nn.Module):
+    def __init__(self , channels):
+        super().__init__()
+        kernel_size=7
+        self.conv = nn.Sequential(
+            nn.Conv2d(2 ,1 , kernel_size , padding=(kernel_size-1)//2)
+            nn.BatchNorm2d(1),
+        )
+        self.actv = nn.Sigmoid()
 
         
+    def forward(self,x:Tensor):
+        mean_pool = pt.mean(x,dim=1 , keepdims=True)
+        max_pool = pt.max(x,dim=1 , keepdims=True).values
+        pool = pt.cat((mean_pool , max_pool) , dim=1)
+        attention = self.actv(attention)
+        return x * attention
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python
+
 #+end_src

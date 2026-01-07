@@ -45,4 +45,4 @@ train(uNet , 1000 , train_loader , val_loader, writer, dev , N)
 
 import matplotlib.pyplot as plt
 import random
-plt.imshow(validation_set[random.randint(0,len(validation_set))][0].permute(1,2,0) , cmap="Greys")
+plt.imshow(validation_set[random.randint(0,len(validation_set))][0].permute(1,2,0) , cmap="Greys" , interpolation='bicubic')

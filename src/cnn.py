@@ -7,34 +7,6 @@ from .attention import MultiheadAttention
 from torch import Tensor
 
 
-class EncoderBlock(nn.Module):
-    def __init__(
-        self, in_ch, out_ch, embedding_dimension, kernel_size=3, actv=nn.SiLU()
-    ):
-        super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(
-                in_ch,
-                out_ch,
-                kernel_size,
-                padding=kernel_size // 2,
-                padding_mode="replicate",
-            ),
-            actv,
-            nn.Conv2d(
-                out_ch,
-                out_ch,
-                kernel_size,
-                padding=kernel_size // 2,
-                padding_mode="replicate",
-            ),
-        )
-
-    def forward(self, x, t):
-        x = self.conv(x)
-        return x
-
-
 class CNN(nn.Module):
     def __init__(
         self,
