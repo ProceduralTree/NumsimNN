@@ -141,6 +141,9 @@ def train(
     
 #+end_src
 
+#+RESULTS:
+: None
+
 #+begin_src python :results output :tangle nil
 import training
 from training import train_step , train
