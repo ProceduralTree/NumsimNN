@@ -168,6 +168,7 @@ def train(
         writer.add_scalar("Loss/train", last_loss, e)
 
         validation_loss = 0.
+        model.eval()
         for i , data in enumerate(validation_data):
             with pt.no_grad():
                 input, label = data
@@ -177,9 +178,9 @@ def train(
                 validation_loss += loss.item()
         validation_loss /= len(validation_data)
         if validation_loss < min_loss :
-            pt.save(model.state_dict() , f"models/checkpoint")
-            pt.save(optimizer.state_dict() , f"optim/checkpoint")
+            pt.save(model.state_dict() , f"models_diffusion/checkpoint")
+            pt.save(optimizer.state_dict() , f"optim_diffusion/checkpoint")
             min_loss= validation_loss
         writer.add_scalar("Loss/val", validation_loss, e)
         if e%10 ==0:
-            sample_diffusion(N.T , model ,  (8,1,64,64) , dev , N , writer=writer)
+            sample_diffusion(N.T , model ,  (8,3,64,64) , dev , N , writer=writer)
