@@ -31,7 +31,7 @@ def train(
     for e in trange(epochs):
         model.train(True)
         running_loss: float = 0.0
-        for i, data in tqdm(enumerate(train_data), total=len(train_data)):
+        for i, data in enumerate(train_data):
             x, label = data
             x = x.to(dev)
             label = label.to(dev)

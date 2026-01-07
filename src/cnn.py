@@ -47,6 +47,7 @@ class CNN(nn.Module):
         ]
         hiddenLayers *= 5
         layers += hiddenLayers
+        layers.append(MultiheadAttention(16, 16, 8))
         layers.append(nn.Conv2d(16, 2, 7, padding="same", stride=1))
         self.conv = nn.Sequential(*layers)
 

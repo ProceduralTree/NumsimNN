@@ -4,7 +4,7 @@ import shutil
 import pyvista as pv
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split, TensorDataset
 import yaml
 
 EXECUTABLE = Path(__file__).parent / "numsim_parallel"
@@ -56,7 +56,7 @@ def run_experiment(re, u, training_in, training_out):
     )
     # Move output files to the data directory
     training_in, training_out = extract_velocity(
-        Path(__file__).parent / "out" / "output_0000.vti", u, training_in, training_out
+        Path(__file__).parent / "out" / "output_0009.vti", u, training_in, training_out
     )
     return training_in, training_out
 
@@ -86,18 +86,21 @@ with open("../data/min_max.yaml", "w") as f:
     yaml.dump(min_max_vals, f)
 
 # Normalize data to [0, 1]
-training_in[:, 0, :, :] += np.abs(in_min)
-training_in[:, 0, :, :] /= in_max + np.abs(in_min)
-training_out[:, 0, :, :] += np.abs(out_min_u)
-training_out[:, 0, :, :] /= out_max_u + np.abs(out_min_u)
-training_out[:, 1, :, :] += np.abs(out_min_v)
-training_out[:, 1, :, :] /= out_max_v + np.abs(out_min_v)
-
-torch.save(
-    {
-        "training_in": torch.from_numpy(training_in).float(),
-        "training_out": torch.from_numpy(training_out).float(),
-    },
-    "../data/training_data.pt",
+training_in[:, 0, :, :] -= in_min
+training_in[:, 0, :, :] /= in_max - in_min
+training_out[:, 0, :, :] -= out_min_u
+training_out[:, 0, :, :] /= out_max_u - out_min_u
+training_out[:, 1, :, :] -= out_min_v
+training_out[:, 1, :, :] /= out_max_v - out_min_v
+data_set = TensorDataset(
+    torch.from_numpy(training_in).float(), torch.from_numpy(training_out).float()
 )
-
+split_size_training = int(len(data_set) * 0.8)
+split_size_val = int(len(data_set) * 0.1)
+split_size_test = len(data_set) - split_size_training - split_size_val
+training_set, validation_set, test_set = random_split(
+    data_set, [split_size_training, split_size_val, split_size_test]
+)
+torch.save(training_set, "../data/train_data.pt")
+torch.save(test_set, "../data/test_data.pt")
+torch.save(validation_set, "../data/validation_data.pt")

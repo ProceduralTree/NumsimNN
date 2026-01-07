@@ -177,10 +177,12 @@ def train(
     N
 ):
     optimizer = AdamW(model.parameters(), lr=1e-4)
-    if Path("models/checkpoint").exists():
-        model.load_state_dict(pt.load("models/checkpoint"))
-    if Path("optim/checkpoint").exists():
-        optimizer.load_state_dict(pt.load("optim/checkpoint"))
+    Path("models_diffusion").mkdir(parents=True, exist_ok=True)
+    Path("optim_diffusion").mkdir(parents=True, exist_ok=True)
+    if Path("models_diffusion/checkpoint").exists():
+        model.load_state_dict(pt.load("models_diffusion/checkpoint"))
+    if Path("optim_diffusion/checkpoint").exists():
+        optimizer.load_state_dict(pt.load("optim_diffusion/checkpoint"))
     loss_fn = MSELoss()
     min_loss = 10000.
     for e in trange(epochs):
