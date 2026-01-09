@@ -29,6 +29,21 @@ def update_settings(re, u):
     SETTINGS_FILE.write_text("\n".join(new_lines))
 
 
+def update_settings_side(re, v):
+    lines = SETTINGS_FILE.read_text().splitlines()
+
+    new_lines = []
+    for line in lines:
+        if line.startswith("re"):
+            new_lines.append(f"re = {re}")
+        elif line.startswith("dirichletLeftY"):
+            new_lines.append(f"dirichletLeftY = {v}")
+        else:
+            new_lines.append(line)
+
+    SETTINGS_FILE.write_text("\n".join(new_lines))
+
+
 def extract_velocity(vti_path, u, training_in, training_out):
     # Load the VTI file
     mesh = pv.read(vti_path)
@@ -61,7 +76,7 @@ def run_experiment(re, u, training_in, training_out):
     return training_in, training_out
 
 
-def extract_side_velocity(vti_path, u, training_in, training_out):
+def extract_side_velocity(vti_path, v, training_in, training_out):
     # Load the VTI file
     mesh = pv.read(vti_path)
 
@@ -72,16 +87,16 @@ def extract_side_velocity(vti_path, u, training_in, training_out):
     velocity_matrix = velocity[:, :2].reshape(21, 21, 2)
     velocity_mat = (velocity_matrix[:, :, 0], velocity_matrix[:, :, 1])
     velocity_input = np.zeros((1, 21, 21))
-    velocity_input[0, 1:-1, 0] = u
+    velocity_input[0, 1:-1, 0] = v
     training_in.append(velocity_input)
     training_out.append(velocity_mat)
 
     return training_in, training_out
 
 
-def run_side_experiment(re, u, training_in, training_out):
+def run_side_experiment(re, v, training_in, training_out):
     # Update settings file
-    update_settings(re, u)
+    update_settings_side(re, v)
 
     subprocess.run(
         [str(EXECUTABLE), str(SETTINGS_FILE)], check=True, cwd=Path(__file__).parent
@@ -240,6 +255,8 @@ for line in lines:
         new_lines.append(f"nCellsX = {20}")
     elif line.startswith("nCellsY"):
         new_lines.append(f"nCellsY = {20}")
+    elif line.startswith("dirichletTopX"):
+        new_lines.append(f"dirichletTopX = {0}")
     else:
         new_lines.append(line)
 
@@ -247,9 +264,9 @@ SETTINGS_FILE.write_text("\n".join(new_lines))
 side_inlet_in = []
 side_inlet_out = []
 for re in range(500, 1600, 100):
-    u = re / 1000
+    v = re / 1000
     side_inlet_in, side_inlet_out = run_side_experiment(
-        re, u, side_inlet_in, side_inlet_out
+        re, v, side_inlet_in, side_inlet_out
     )
 
 side_inlet_in = np.array(side_inlet_in)
