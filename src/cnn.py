@@ -36,7 +36,7 @@ class CNN(nn.Module):
         ## ConvBlockAttention(16),
         # ]
         # hiddenLayers *= 5
-        layers += [ResLayer(16, 16, 16, 7) for i in range(3)]
+        layers += [ResLayer(16, 16, 16, 3) for i in range(15)]
         # layers += hiddenLayers
         layers.append(MultiheadAttention(16, 16, 8))
         layers.append(nn.Conv2d(16, 2, 7, padding="same", stride=1))
